@@ -109,12 +109,20 @@ elif menu == "Add New Entry":
 
 elif menu == "Manage Database":
   st.subheader("⚙️ ڈیٹا بیس مینجمنٹ")
-  st.text("یہاں آپ اپنی ڈیٹا بیس فائل کی حالت دیکھ سکتے ہیں۔")
-  if st.button("تمام ٹیبلز دکھائیں"):
+  st.text("یہاں آپ اپنی ڈیٹا بیس فائل کی حالت اور کالمز دیکھ سکتے ہیں۔")
+  if st.button("ٹیبلز اور کالمز دکھائیں"):
     try:
       conn = sqlite3.connect(DB_NAME)
-      df = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
+      tables_df = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", conn)
+      st.write("موجودہ ٹیبلز:")
+      st.dataframe(tables_df)
+      
+      # fatawa_hub کے کالمز نکالنے کا کوڈ
+      if "fatawa_hub" in tables_df['name'].values:
+          columns_df = pd.read_sql_query("PRAGMA table_info(fatawa_hub);", conn)
+          st.success("ٹیبل 'fatawa_hub' کے کالمز کے نام یہ ہیں:")
+          st.dataframe(columns_df[['name']])
+          
       conn.close()
-      st.dataframe(df)
     except Exception as e:
       st.error(f"خرابی: {e}")
