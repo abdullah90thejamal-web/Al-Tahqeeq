@@ -80,12 +80,58 @@ if menu == "Dashboard":
     )
 
 elif menu == "Search & Research":
-  st.subheader("🔍 فقہی تلاش و تحقیق")
-  search_query = st.text_input("موضوع یا کی ورڈ درج کریں:")
-  if st.button("تلاش کریں"):
-    st.write(
-        f"آپ نے تلاش کیا: **{search_query}** (یہاں نتائج جلد ظاہر ہوں گے)"
-    )
+  st.subheader("🔍 فقہی تلاش و تحقیق (حنفی فتاویٰ و مسائل)")
+
+  # Search input
+  search_keyword = st.text_input(
+      "کوئی بھی مسئلہ، عنوان یا کی ورڈ درج کریں (مثلاً: نماز، روزہ، نکاح"
+      " وغیرہ):"
+  )
+
+  if st.button("تلاش شروع کریں"):
+    if search_keyword.strip() != "":
+      try:
+        conn = sqlite3.connect(DB_NAME)
+        # ییہاں آپ اپنے ٹیبل کا نام اور کالم کا نام اپنی مرضی سے بدل سکتے ہیں
+        # فی الحال ہم تمام ٹیبلز میں سرچ کرنے کی کوشش کرتے ہیں یا ایک عام ٹیبل مان لیتے ہیں
+        query = (
+            "SELECT * FROM sqlite_master WHERE type='table' AND name NOT LIKE"
+            " 'sqlite_%';"
+        )
+        tables_df = pd.read_sql_query(query, conn)
+
+        if not tables_df.empty:
+          found_results = False
+          for table_name in tables_df["name"]:
+            # ہر ٹیبل میں تلاش کریں (فرض کرتے ہیں کالمز میں title یا details موجود ہیں)
+            try:
+              search_query = f"SELECT * FROM {table_name} WHERE title LIKE ? OR details LIKE ? OR content LIKE ?"
+              pattern = f"%{search_keyword}%"
+              df = pd.read_sql_query(
+                  search_query, conn, params=(pattern, pattern, pattern)
+              )
+              if not df.empty:
+                st.success(
+                    f"ٹیبل '{table_name}' میں نتائج پائے گئے:"
+                )
+                st.dataframe(df)
+                found_results = True
+            except Exception:
+              # اگر کسی ٹیبل میں یہ کالم نہ ہوں تو اگلا ٹیبل چیک کرے
+              continue
+
+          if not found_results:
+            st.warning(
+                "اس کی ورڈ سے متعلق ڈیٹا بیس میں کوئی نتیجہ نہیں ملا۔ براہ کرم"
+                " کوئی دوسرا لفظ تلاش کریں۔"
+            )
+        else:
+          st.warning("ڈیٹا بیس میں کوئی ٹیبل موجود نہیں ہے۔")
+        conn.close()
+      except Exception as e:
+        st.error(f"تلاش کے دوران خرابی پیش آئی: {e}")
+    else:
+      st.warning("براہ کرم تلاش کے لیے کوئی لفظ درج کریں۔")
 
 elif menu == "Add New Entry":
   st.subheader("➕ نیا تحقیقی اندراج شامل کریں")
